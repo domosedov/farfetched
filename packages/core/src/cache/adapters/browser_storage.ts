@@ -83,16 +83,20 @@ export function browserStorageCache(
     });
 
     if (maxAge) {
+      const timeout = parseTime(maxAge);
+
+      setItemFx.done.watch((payload) => {
+        if (payload.params.key === META_KEY) return;
+
+        const boundItemExpired = scopeBind(itemExpired, { safe: true });
+
+        setTimeout(() => boundItemExpired(get("params")(payload)), timeout);
+      });
+
       sample({
-        clock: delay({
-          clock: sample({
-            clock: setItemFx.done,
-            filter: ({ params }) => params.key !== META_KEY,
-          }),
-          timeout: parseTime(maxAge),
-        }),
-        fn: get('params'),
-        target: [itemExpired, removeSavedItemFx],
+        clock: itemExpired,
+        fn: ({ key }) => key,
+        target: removeSavedItemFx,
       });
     }
 
